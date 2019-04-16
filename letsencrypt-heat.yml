@@ -25,7 +25,7 @@ parameters:
   serverName:
     type: string
     label: 'Name of new server'
-    default: 'letsencrypt-00'
+    default: 'certbot-00'
 
   serverImage:
     type: string
@@ -97,7 +97,7 @@ resources:
 
                     # install needed packages
                     pkgs="iptables-services iptables-utils httpd mod_ssl certbot python2-certbot-apache"
-                    yum -qy install $pkgs
+                    yum -q -y install $pkgs > /dev/null 2>&1
                     systemctl stop firewalld; systemctl mask firewalld; systemctl enable iptables
                     iptables -I INPUT 1 -m multiport -p tcp --dports http,https -j ACCEPT
                     iptables-save > /etc/sysconfig/iptables
@@ -151,6 +151,26 @@ outputs:
     value: { get_attr: [serverInstance, accessIPv4 ] }
     description: 'IPv4 of server'
 
-  certBotResultsDisplay:
-    value: {get_attr: [certBotResults, deploy_stdout]}
-    description: 'certBot results'
+  certBotCert:
+    description: 'SSL certificate for domain'
+    value:
+      str_split:
+        - ';'
+        - { get_attr: ['certBotResults', 'deploy_stdout'] }
+        - 0
+
+  certBotChain:
+    description: SSL chain (intermediate) certificates for domain
+    value:
+      str_split:
+        - ';'
+        - { get_attr: ['certBotResults', 'deploy_stdout'] }
+        - 1
+
+  certBotKey:
+    description: SSL private key for domain
+    value:
+      str_split:
+        - ';'
+        - { get_attr: ['certBotResults', 'deploy_stdout'] }
+        - 2
