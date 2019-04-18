@@ -47,8 +47,23 @@ resources:
       ttl: 300
       records:
         - type: TXT
-          data: "12345hello"
-          name: "_jd.rackesc.net"
+          data:  { get_attr: [ serverPass, value ] }
+#begin DNS resources
+  dnsRecord:
+    type: Rackspace::Cloud::DNS
+    properties:
+      emailAddress: {get_param: emailAddr}
+      name: rackesc.net
+      ttl: 300
+      records:
+        - type: TXT
+          data: { get_attr: [serverPass, value ]}
+          name:
+            list_join:
+              - ''
+              - - '_'
+              - - 'acme-challenge.'
+              - - { get_param: domainToSecure }
 
 outputs:
   dnsRecordDisplay:
