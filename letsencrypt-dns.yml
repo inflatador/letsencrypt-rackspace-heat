@@ -1,0 +1,175 @@
+heat_template_version: 2015-10-15
+
+description: |
+   ### Using heat to run acme.sh
+   ### and get a valid letencrypt SSL certificate
+
+parameter_groups:
+
+- label: DNS settings
+  parameters:
+    - domainToSecure
+    - emailAddr
+
+parameters:
+
+# begin DNS params
+  domainToSecure:
+    type: string
+    default: example.rackesc.net
+    label: Domain that will receive the letsencrypt cert. DNS must be hosted in Rackspace Cloud.
+    description: Domain that will receive the letsencrypt cert. DNS must be hosted in Rackspace Cloud.
+
+  emailAddr:
+    type: string
+    default: nobody@noone.net
+    label: email address for Rackspace DNS record, letsencrypt account, and Cloud Monitoring notifications
+
+resources:
+
+#begin server resources
+
+  serverPass:
+      type: OS::Heat::RandomString
+
+  serverInstance:
+    type: OS::Nova::Server
+    properties:
+      name: 
+        str_replace:
+          template: letsencrypt-dns-$domain
+          params:
+            $domain: { get_param: domainToSecure }
+      admin_pass: { get_attr: [ serverPass, value ] }
+      flavor: general1-1
+      image: 'CentOS 7 (PVHVM) (Orchestration)'
+      config_drive: True
+      user_data_format: SOFTWARE_CONFIG
+      metadata:
+        created_by: cloud_orch_template
+      networks:
+        - network: '00000000-0000-0000-0000-000000000000'
+        - network: '11111111-1111-1111-1111-111111111111'
+
+  getChallenge:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        str_replace:
+          template: |
+                    #!/usr/bin/env bash
+                    # get-dns-challenge-with-acme.sh
+                    # clones acme.sh from the repo and sets up the challenge
+                    # author: Brian King
+                    # copyright: 2019
+                    # license: Apache
+                    pkgs="git"
+                    yum -q -y install $pkgs > /dev/null 2>&1
+                    git clone https://github.com/Neilpang/acme.sh.git /root/acme.sh/ > /dev/null 2>&1
+                    /bin/bash /root/acme.sh/acme.sh --home /root/.acme.sh --issue --dns -d $domain --yes-I-know-dns-manual-mode-enough-go-ahead-please >> /var/log/cert_issue.log
+                    grep "TXT value" /var/log/cert_issue.log | awk -F\' '{print $2}'
+          params:
+            $domain: { get_param: domainToSecure }
+
+  challengeToken:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: serverInstance
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      config: { get_resource: getChallenge }
+      server: { get_resource: serverInstance }
+
+#begin DNS resources
+
+  challengeResponse:
+    type: Rackspace::Cloud::DNS
+    properties:
+      emailAddress: {get_param: emailAddr}
+      name: rackesc.net
+      ttl: 300
+      records:
+        - type: TXT
+          data: { get_attr: [challengeToken, deploy_stdout] }
+          name:
+            list_join:
+              - ''
+              - - '_acme-challenge.'
+              - - { get_param: domainToSecure }
+
+
+  getCert:
+    type: OS::Heat::SoftwareConfig
+    depends_on: challengeResponse
+    properties:
+      group: script
+      config:
+        str_replace:
+          template: |
+                    #!/usr/bin/env bash
+                    # answer-dns-challenge-with-acme.sh
+                    # clones acme.sh from the repo and sets up the challenge
+                    # author: Brian King
+                    # copyright: 2019
+                    # license: Apache
+                    /bin/bash /root/acme.sh/acme.sh --home /root/.acme.sh --renew --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please -d $domain  >> /var/log/cert_renew.log
+                    cert="$(cat /root/.acme.sh/$domain/$domain.cer)"
+                    chain="$(cat /root/.acme.sh/$domain/fullchain.cer)"
+                    privkey="$(cat /root/.acme.sh/$domain/$domain.key)"
+                    echo "$cert;$chain;$privkey"
+          params:
+            $domain: { get_param: domainToSecure }
+
+  certData:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: serverInstance
+    properties:
+      signal_transport: TEMP_URL_SIGNAL
+      config: { get_resource: getCert }
+      server: { get_resource: serverInstance }
+
+
+
+outputs:
+
+  domainDisplay:
+    description: 'Domain to receive letsencrypt cert'
+    value: { get_param: domainToSecure }
+  
+  serverPassDisplay:
+    description: 'Server Admin Password'
+    value: { get_attr: [serverPass, value ] }
+
+
+  serverIPv4Display:
+    description: 'Server Public IPv4 address'
+    value: { get_attr: [serverInstance, accessIPv4 ] }
+
+  challengeTokenDisplay:
+    description: 'Challenge Token'
+    value: { get_attr: [ challengeToken, deploy_stdout ] }
+
+    
+  certCertDisplay:
+    description: 'SSL certificate for domain'
+    value:
+      str_split:
+        - ';'
+        - { get_attr: ['certData', 'deploy_stdout'] }
+        - 0
+
+  certChainDisplay:
+    description: 'Intermediate certificates for domain'
+    value:
+      str_split:
+         - ';'
+         - { get_attr: ['certData', 'deploy_stdout'] }
+         - 1
+
+  certKeyDisplay:
+    description: 'SSL private key for domain'
+    value:
+      str_split:
+        - ';'
+        - { get_attr: ['certData', 'deploy_stdout'] }
+        - 2

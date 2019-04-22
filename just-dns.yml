@@ -1,0 +1,70 @@
+heat_template_version: 2015-10-15
+
+description: |
+   ### Proof of concept using list join
+
+parameter_groups:
+
+- label: DNS settings
+  parameters:
+    - domainToSecure
+    - emailAddr
+    - challengePrepend
+
+parameters:
+
+# begin DNS params
+  domainToSecure:
+    type: string
+    default: heat00.rackesc.net
+    label: Domain that will receive the letsencrypt cert. DNS must be hosted in Rackspace Cloud.
+    description: Domain that will receive the letsencrypt cert. DNS must be hosted in Rackspace Cloud.
+
+  emailAddr:
+    type: string
+    default: nobody@noone.net
+    label: email address for Rackspace DNS and letsencrypt
+
+# the underscore that will begin the TXT record value
+  challengePrepend:
+    type: string
+    default: '-'
+    label: 'the underscore that will begin the TXT record value'
+
+resources:
+
+#begin server resources
+
+  serverPass:
+      type: OS::Heat::RandomString
+
+#begin DNS resources
+  dnsRecord:
+    type: Rackspace::Cloud::DNS
+    properties:
+      emailAddress: { get_param: emailAddr }
+      name: rackesc.net
+      ttl: 300
+      records:
+        - type: TXT
+          data:  { get_attr: [ serverPass, value ] }
+#begin DNS resources
+  dnsRecord:
+    type: Rackspace::Cloud::DNS
+    properties:
+      emailAddress: {get_param: emailAddr}
+      name: rackesc.net
+      ttl: 300
+      records:
+        - type: TXT
+          data: { get_attr: [serverPass, value ]}
+          name:
+            list_join:
+              - ''
+              - - '_'
+              - - 'acme-challenge.'
+              - - { get_param: domainToSecure }
+
+outputs:
+  dnsRecordDisplay:
+    value: { get_attr: [dnsRecord, show] }
