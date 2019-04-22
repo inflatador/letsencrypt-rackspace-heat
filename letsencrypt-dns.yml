@@ -58,7 +58,7 @@ resources:
       config:
         str_replace:
           template: |
-                    #!/usr/bin/sh
+                    #!/usr/bin/env bash
                     # get-dns-challenge-with-acme.sh
                     # clones acme.sh from the repo and sets up the challenge
                     # author: Brian King
@@ -67,8 +67,8 @@ resources:
                     pkgs="git"
                     yum -q -y install $pkgs > /dev/null 2>&1
                     git clone https://github.com/Neilpang/acme.sh.git /root/acme.sh/ > /dev/null 2>&1
-                    /usr/bin/sh /root/acme.sh/acme.sh --home /root/.acme.sh --issue --dns -d $domain --yes-I-know-dns-manual-mode-enough-go-ahead-please >> /var/log/cert_issue.log
-                    grep "TXT value" /tmp/results | awk -F\' '{print $2}'
+                    /bin/bash /root/acme.sh/acme.sh --home /root/.acme.sh --issue --dns -d $domain --yes-I-know-dns-manual-mode-enough-go-ahead-please >> /var/log/cert_issue.log
+                    grep "TXT value" /var/log/cert_issue.log | awk -F\' '{print $2}'
           params:
             $domain: { get_param: domainToSecure }
 
@@ -131,6 +131,11 @@ resources:
 
 
 outputs:
+
+  domainDisplay:
+    description: 'Domain to receive letsencrypt cert'
+    value: { get_param: domainToSecure }
+  
   serverPassDisplay:
     description: 'Server Admin Password'
     value: { get_attr: [serverPass, value ] }
@@ -144,10 +149,6 @@ outputs:
     description: 'Challenge Token'
     value: { get_attr: [ challengeToken, deploy_stdout ] }
 
-  certDataDisplay:
-    description: 'SSL certificate, chain, and private key'
-    value: { get_attr: [ certData, deploy_stdout] }
-
     
   certCertDisplay:
     description: 'SSL certificate for domain'
@@ -158,7 +159,7 @@ outputs:
         - 0
 
   certChainDisplay:
-    description: Intermediate certificates for domain
+    description: 'Intermediate certificates for domain'
     value:
       str_split:
          - ';'
@@ -166,7 +167,7 @@ outputs:
          - 1
 
   certKeyDisplay:
-    description: SSL private key for domain
+    description: 'SSL private key for domain'
     value:
       str_split:
         - ';'
