@@ -16,7 +16,7 @@ parameters:
 # begin DNS params
   domainToSecure:
     type: string
-    default: example.rackesc.net
+    default: example.mydomain.com
     label: Domain that will receive the letsencrypt cert. DNS must be hosted in Rackspace Cloud.
     description: Domain that will receive the letsencrypt cert. DNS must be hosted in Rackspace Cloud.
 
@@ -35,7 +35,7 @@ resources:
   serverInstance:
     type: OS::Nova::Server
     properties:
-      name: 
+      name:
         str_replace:
           template: letsencrypt-dns-$domain
           params:
@@ -86,7 +86,11 @@ resources:
     type: Rackspace::Cloud::DNS
     properties:
       emailAddress: {get_param: emailAddr}
-      name: rackesc.net
+      name:
+        list_join:
+          - '.'
+          - - {str_split: ['.', { get_param: domainToSecure }, 1]}
+          - - {str_split: ['.', { get_param: domainToSecure }, 2]}
       ttl: 300
       records:
         - type: TXT
@@ -114,7 +118,7 @@ resources:
                     # license: Apache
                     /bin/bash /root/acme.sh/acme.sh --home /root/.acme.sh --renew --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please -d $domain  >> /var/log/cert_renew.log
                     cert="$(cat /root/.acme.sh/$domain/$domain.cer)"
-                    chain="$(cat /root/.acme.sh/$domain/fullchain.cer)"
+                    chain="$(cat /root/.acme.sh/$domain/ca.cer)"
                     privkey="$(cat /root/.acme.sh/$domain/$domain.key)"
                     echo "$cert;$chain;$privkey"
           params:
@@ -135,11 +139,10 @@ outputs:
   domainDisplay:
     description: 'Domain to receive letsencrypt cert'
     value: { get_param: domainToSecure }
-  
+
   serverPassDisplay:
     description: 'Server Admin Password'
     value: { get_attr: [serverPass, value ] }
-
 
   serverIPv4Display:
     description: 'Server Public IPv4 address'
@@ -149,7 +152,7 @@ outputs:
     description: 'Challenge Token'
     value: { get_attr: [ challengeToken, deploy_stdout ] }
 
-    
+
   certCertDisplay:
     description: 'SSL certificate for domain'
     value:
@@ -159,7 +162,7 @@ outputs:
         - 0
 
   certChainDisplay:
-    description: 'Intermediate certificates for domain'
+    description: 'Intermediate certificate for domain'
     value:
       str_split:
          - ';'
