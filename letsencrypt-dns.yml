@@ -3,6 +3,9 @@ heat_template_version: 2015-10-15
 description: |
    ### Using heat to run acme.sh
    ### and get a valid letsencrypt SSL certificate
+   ### author: Brian King
+   ### license: Apache
+   ### last modified: 2020-03-21
 
 parameter_groups:
 
@@ -22,7 +25,7 @@ parameters:
 
   emailAddr:
     type: string
-    default: nobody@noone.net
+    default: example@example.com
     label: email address for Rackspace DNS record, letsencrypt account, and Cloud Monitoring notifications
 
 resources:
