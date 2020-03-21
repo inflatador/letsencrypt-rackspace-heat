@@ -80,16 +80,21 @@ resources:
       metadata:
         created_by: cloud_orch_template
       networks:
-        - network: '00000000-0000-0000-0000-000000000000'
-        - network: '11111111-1111-1111-1111-111111111111'
+        - network: "00000000-0000-0000-0000-000000000000"
+        - network: "11111111-1111-1111-1111-111111111111"
 
   getChallenge:
     type: OS::Heat::SoftwareConfig
     properties:
       group: script
+      outputs:
+      - name: challenge
+        type: String
       config:
         str_replace:
-          template: |
+          params:
+            $domain: { get_param: domainToSecure }
+          template: |-
                     #!/usr/bin/env bash
                     # get-dns-challenge-with-acme.sh
                     # clones acme.sh from the repo and sets up the challenge
