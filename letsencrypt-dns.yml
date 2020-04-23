@@ -45,7 +45,7 @@ resources:
             $domain: { get_param: domainToSecure }
       admin_pass: { get_attr: [ serverPass, value ] }
       flavor: general1-1
-      image: "CentOS 7 (PVHVM) (Orchestration)"
+      image: 8a63828d-426a-426d-a7e3-f1988750198b
       config_drive: True
       user_data_format: SOFTWARE_CONFIG
       metadata:
@@ -120,10 +120,11 @@ resources:
           template: |
                     #!/usr/bin/env bash
                     # answer-dns-challenge-with-acme.sh
-                    # clones acme.sh from the repo and sets up the challenge
+                    # Provisions certificate
                     # author: Brian King
                     # copyright: 2019
                     # license: Apache
+                    sleep 30
                     /bin/bash /root/acme.sh/acme.sh --home /root/.acme.sh --renew --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please -d $domain  >> /var/log/cert_renew.log
                     cert="$(cat /root/.acme.sh/$domain/$domain.cer)"
                     chain="$(cat /root/.acme.sh/$domain/ca.cer)"

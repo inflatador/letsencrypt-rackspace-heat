@@ -4,6 +4,7 @@
 # author: Brian King
 # copyright: 2019
 # license: Apache
+sleep 30
 /bin/bash /root/acme.sh/acme.sh --home /root/.acme.sh --renew --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please -d $domain  >> /var/log/cert_renew.log
 cert="$(cat /root/.acme.sh/$domain/$domain.cer)"
 chain="$(cat /root/.acme.sh/$domain/fullchain.cer)"
