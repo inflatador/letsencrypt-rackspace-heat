@@ -51,30 +51,7 @@ resources:
             $domain: { get_param: domainToSecure }
       admin_pass: { get_attr: [ serverPass, value ] }
       flavor: general1-1
-      image: "CentOS 7 (PVHVM) (Orchestration)"
-      config_drive: True
-      user_data_format: SOFTWARE_CONFIG
-      metadata:
-        created_by: cloud_orch_template
-      networks:
-        - network: "00000000-0000-0000-0000-000000000000"
-        - network: "11111111-1111-1111-1111-111111111111"
-
-  getChallenge:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      group: script
-      outputs:
-      - name: challenge
-        type: String
-      config:
-        str_replace:
-          params:
-            $domain: { get_param: domainToSecure }
-          template: |-
-      admin_pass: { get_attr: [ serverPass, value ] }
-      flavor: general1-1
-      image: 'CentOS 7 (PVHVM) (Orchestration)'
+      image: 0c3907db-860a-4fea-9e72-c0d65b71f5ee
       config_drive: True
       user_data_format: SOFTWARE_CONFIG
       metadata:

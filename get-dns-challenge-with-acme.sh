@@ -11,7 +11,3 @@ git clone https://github.com/Neilpang/acme.sh.git /root/acme.sh/ > /dev/null 2>&
 grep "TXT value" /var/log/cert_issue.log | awk -F\' '{print $2}'
 CT=$(grep "TXT value" /var/log/cert_issue.log | awk -F\' '{print $2}')
 printf %s "${CT}"
-=======
-grep "TXT value" /var/log/cert_issue.log | awk -F\' '{print $2}'
-CT=$(grep "TXT value" /var/log/cert_issue.log | awk -F\' '{print $2}')
-printf %s "${CT}"
